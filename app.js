@@ -314,8 +314,6 @@ async function handleCameraCapture(e) {
 
     const recognizePromise = Tesseract.recognize(dataUrl, "jpn+eng", {
       workerPath: "https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/worker.min.js",
-      langPath: "https://cdn.jsdelivr.net/npm/@tesseract.js-data/jpn/4.0.0_best_int",
-      corePath: "https://cdn.jsdelivr.net/npm/tesseract.js-core@5/tesseract-core-simd-lstm.wasm.js",
       logger: (m) => {
         console.log("[OCR]", m.status, m.progress);
         if (m.status === "recognizing text") {
@@ -457,6 +455,25 @@ async function init() {
   if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("sw.js").catch((err) => console.error("SW登録失敗", err));
   }
+
+  // Tesseract内部などで想定外のエラーが起きても、読み取り中オーバーレイが
+  // 固まったままにならないようにする保険
+  window.addEventListener("unhandledrejection", (event) => {
+    const overlay = document.getElementById("scanningOverlay");
+    if (overlay && !overlay.hidden) {
+      console.error("[OCR] 未処理のエラー", event.reason);
+      overlay.hidden = true;
+      alert("読み取り中に予期しないエラーが発生しました。もう一度お試しください。");
+    }
+  });
+  window.addEventListener("error", (event) => {
+    const overlay = document.getElementById("scanningOverlay");
+    if (overlay && !overlay.hidden) {
+      console.error("[OCR] 未処理のエラー", event.error || event.message);
+      overlay.hidden = true;
+      alert("読み取り中に予期しないエラーが発生しました。もう一度お試しください。");
+    }
+  });
 }
 
 document.addEventListener("DOMContentLoaded", init);
