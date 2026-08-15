@@ -14,6 +14,13 @@
 
 * { box-sizing: border-box; }
 
+/* hidden属性は、どんなdisplay指定よりも必ず優先させる
+   (これが無いと .overlay や .sheet の display:flex が
+   hidden より優先されてしまい、常に画面に表示され続けてしまう) */
+[hidden] {
+  display: none !important;
+}
+
 html, body {
   margin: 0;
   padding: 0;
