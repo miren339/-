@@ -1,5 +1,5 @@
-const SHELL_CACHE = "meishi-shell-v1";
-const RUNTIME_CACHE = "meishi-runtime-v1";
+const SHELL_CACHE = "meishi-shell-v2";
+const RUNTIME_CACHE = "meishi-runtime-v2";
 
 const SHELL_FILES = [
   "./",
