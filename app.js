@@ -310,8 +310,14 @@ async function handleCameraCapture(e) {
     const dataUrl = await fileToResizedDataURL(file);
 
     label.textContent = "文字を読み取り中…";
-    const { data } = await Tesseract.recognize(dataUrl, "jpn+eng", {
+    console.log("[OCR] 開始します");
+
+    const recognizePromise = Tesseract.recognize(dataUrl, "jpn+eng", {
+      workerPath: "https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/worker.min.js",
+      langPath: "https://cdn.jsdelivr.net/npm/@tesseract.js-data/jpn/4.0.0_best_int",
+      corePath: "https://cdn.jsdelivr.net/npm/tesseract.js-core@5/tesseract-core-simd-lstm.wasm.js",
       logger: (m) => {
+        console.log("[OCR]", m.status, m.progress);
         if (m.status === "recognizing text") {
           const pct = Math.round((m.progress || 0) * 100);
           label.textContent = `文字を読み取り中… ${pct}%`;
@@ -320,6 +326,14 @@ async function handleCameraCapture(e) {
         }
       }
     });
+
+    // 90秒たっても終わらない場合はタイムアウトさせ、無限に固まらないようにする
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error("OCR_TIMEOUT")), 90000)
+    );
+
+    const { data } = await Promise.race([recognizePromise, timeoutPromise]);
+    console.log("[OCR] 完了しました");
 
     const rawText = (data && data.text) || "";
     const fields = extractFields(rawText);
@@ -342,9 +356,13 @@ async function handleCameraCapture(e) {
     overlay.hidden = true;
     openNewCardForm(newCard);
   } catch (err) {
-    console.error(err);
+    console.error("[OCR] エラー", err);
     overlay.hidden = true;
-    alert("読み取りに失敗しました。初回はOCRデータのダウンロードにネット接続が必要です。電波状況を確認して、もう一度お試しください。");
+    if (err && err.message === "OCR_TIMEOUT") {
+      alert("読み取りに90秒以上かかったため中断しました。電波状況の良い場所で、もう一度お試しください。何度も同じ場合は、開発者ツールのConsoleタブに出ているログをご確認ください。");
+    } else {
+      alert("読み取りに失敗しました。初回はOCRデータのダウンロードにネット接続が必要です。電波状況を確認して、もう一度お試しください。");
+    }
   }
 }
 
